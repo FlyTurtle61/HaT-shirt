@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using OzSapkaTShirt.Data;
 using OzSapkaTShirt.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace OzSapkaTShirt.Controllers
 {
@@ -11,25 +14,25 @@ namespace OzSapkaTShirt.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ApplicationContext _context;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public UsersController(UserManager<ApplicationUser> userManager, ApplicationContext context)
+        public UsersController(UserManager<ApplicationUser> userManager, ApplicationContext context, SignInManager<ApplicationUser> signInManager)
         {
             _userManager = userManager;
             _context = context;
+            _signInManager = signInManager;
         }
 
         // GET: Users
-        public async Task<IActionResult> Index()
-        {
-            return _userManager.Users != null ?
-                        View(await _userManager.Users.Include(u => u.GenderType).Include(u => u.City).OrderBy(u => u.Name).ThenBy(u => u.SurName).ToListAsync()) :
-                        Problem("Entity set 'ApplicationContext.Users'  is null.");
-        }
 
         // GET: Userss/Details/5
+        [Authorize]
         public async Task<IActionResult> Details(string? id)
         {
             ApplicationUser? user;
+            var a = 3;
+
+            a = a / 1000000000;
 
             if (id == null || _userManager.Users == null)
             {
@@ -72,7 +75,8 @@ namespace OzSapkaTShirt.Controllers
                 identityResult = _userManager.CreateAsync(user, user.PassWord).Result;
                 if (identityResult == IdentityResult.Success)
                 {
-                    return RedirectToAction(nameof(Index));
+                    //Add customer role to user
+                    return RedirectToAction("Index", "Home");
                 }
                 foreach (IdentityError error in identityResult.Errors)
                 {
@@ -87,6 +91,7 @@ namespace OzSapkaTShirt.Controllers
         }
 
         // GET: Products/Edit/5
+        [Authorize]
         public async Task<IActionResult> Edit(string? id)
         {
             SelectList genders, cities;
@@ -113,6 +118,7 @@ namespace OzSapkaTShirt.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> Edit(string id, [Bind("Id,Name,SurName,Corporate,Address,Gender,BirthDate,UserName,Email,PhoneNumber,CityCode")] ApplicationUser user)
         {
             IdentityResult? identityResult;
@@ -124,8 +130,8 @@ namespace OzSapkaTShirt.Controllers
                 return NotFound();
             }
 
-            ModelState["PassWord"].ValidationState = Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Valid;
-            ModelState["ConfirmPassWord"].ValidationState = Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Valid;
+            ModelState.Remove("PassWord");
+            ModelState.Remove("ConfirmPassWord");
             if (ModelState.IsValid)
             {
                 existingUser = _userManager.FindByIdAsync(id).Result;
@@ -142,7 +148,7 @@ namespace OzSapkaTShirt.Controllers
                 identityResult = _userManager.UpdateAsync(existingUser).Result;
                 if (identityResult == IdentityResult.Success)
                 {
-                    return RedirectToAction(nameof(Index));
+                    return RedirectToAction("Index", "Home");
                 }
                 foreach (IdentityError error in identityResult.Errors)
                 {
@@ -157,6 +163,7 @@ namespace OzSapkaTShirt.Controllers
         }
 
         // GET: Products/Delete/5
+        [Authorize]
         public async Task<IActionResult> Delete(string? id)
         {
             if (id == null || _userManager.Users == null)
@@ -177,6 +184,7 @@ namespace OzSapkaTShirt.Controllers
         // POST: Products/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             if (_userManager.Users == null)
@@ -188,12 +196,74 @@ namespace OzSapkaTShirt.Controllers
             {
                 await _userManager.DeleteAsync(user);
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction("Index","Home");
         }
 
         private bool UserExists(string id)
         {
             return (_userManager.Users?.Any(e => e.Id == id)).GetValueOrDefault();
+        }
+
+        public IActionResult Login()
+        {
+            return View();
+        }
+
+        // POST: Users/Create
+        // To protect from overposting attacks, enable the specific properties you want to bind to.
+        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login([Bind("UserName,PassWord")] ApplicationUser user)
+        {
+            Microsoft.AspNetCore.Identity.SignInResult signInResult;
+
+            if (ModelState["UserName"].ValidationState == ModelValidationState.Valid)
+            {
+                if (ModelState["Password"].ValidationState == ModelValidationState.Valid)
+                {
+                    signInResult = _signInManager.PasswordSignInAsync(user.UserName, user.PassWord, false, false).Result;
+                    if (signInResult.Succeeded == true)
+                    {
+                        return RedirectToAction("Index", "Home");
+                    }
+                }
+            }
+            return View(user);
+        }
+
+        [Authorize]
+        public IActionResult ChangePassword()
+        {
+            return View();
+        }
+
+        // POST: Users/Create
+        // To protect from overposting attacks, enable the specific properties you want to bind to.
+        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword(string oldPassword, string Password)
+        {
+            string userIdentity = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            IdentityResult identityResult;
+            ApplicationUser existingUser = _userManager.FindByIdAsync(userIdentity).Result;
+
+            existingUser.PassWord = Password;
+            existingUser.ConfirmPassWord = Password;
+            existingUser.UserName = existingUser.UserName.Trim();
+            identityResult = _userManager.ChangePasswordAsync(existingUser, oldPassword, Password).Result;
+            if (identityResult.Succeeded == true)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+            return View();
+        }
+        public IActionResult Logout()
+        {
+            _signInManager.SignOutAsync().Wait();
+            return RedirectToAction("Index", "Home");
         }
     }
 }

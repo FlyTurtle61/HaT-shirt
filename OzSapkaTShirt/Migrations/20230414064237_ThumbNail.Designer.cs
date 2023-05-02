@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OzSapkaTShirt.Data;
 
@@ -11,9 +12,10 @@ using OzSapkaTShirt.Data;
 namespace OzSapkaTShirt.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20230414064237_ThumbNail")]
+    partial class ThumbNail
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -287,55 +289,6 @@ namespace OzSapkaTShirt.Migrations
                     b.ToTable("Genders");
                 });
 
-            modelBuilder.Entity("OzSapkaTShirt.Models.Order", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"), 1L, 1);
-
-                    b.Property<DateTime>("OrderDate")
-                        .HasColumnType("date");
-
-                    b.Property<float>("TotalPrice")
-                        .HasColumnType("real");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Orders");
-                });
-
-            modelBuilder.Entity("OzSapkaTShirt.Models.OrderProduct", b =>
-                {
-                    b.Property<long>("OrderId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("ProductId")
-                        .HasColumnType("bigint");
-
-                    b.Property<float>("Price")
-                        .HasColumnType("real");
-
-                    b.Property<byte>("Quantity")
-                        .HasColumnType("tinyint");
-
-                    b.Property<float>("Total")
-                        .HasColumnType("real");
-
-                    b.HasKey("OrderId", "ProductId");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("OrderProducts");
-                });
-
             modelBuilder.Entity("OzSapkaTShirt.Models.Product", b =>
                 {
                     b.Property<long>("Id")
@@ -456,36 +409,6 @@ namespace OzSapkaTShirt.Migrations
                     b.Navigation("City");
 
                     b.Navigation("GenderType");
-                });
-
-            modelBuilder.Entity("OzSapkaTShirt.Models.Order", b =>
-                {
-                    b.HasOne("OzSapkaTShirt.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("OzSapkaTShirt.Models.OrderProduct", b =>
-                {
-                    b.HasOne("OzSapkaTShirt.Models.Order", "Order")
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OzSapkaTShirt.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Product");
                 });
 #pragma warning restore 612, 618
         }
