@@ -22,16 +22,6 @@ namespace OzSapkaTShirt.Controllers
         {
             _context = context;
         }
-
-        // GET: Products
-        public async Task<IActionResult> Index()
-        {
-            return _context.Products != null ?
-                        View(await _context.Products.ToListAsync()) :
-                        Problem("Entity set 'ApplicationContext.Product'  is null.");
-        }
-
-        // GET: Products/Details/5
         public async Task<IActionResult> Details(long? id)
         {
             if (id == null || _context.Products == null)
@@ -48,11 +38,5 @@ namespace OzSapkaTShirt.Controllers
 
             return View(product);
         }
-
-        // GET: Products/Create
-
-        // GET: Products/Edit/5
-
-        // GET: Products/Delete/5
     }
 }

@@ -226,6 +226,9 @@ namespace OzSapkaTShirt.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("RememberMe")
+                        .HasColumnType("bit");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -259,6 +262,20 @@ namespace OzSapkaTShirt.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("OzSapkaTShirt.Models.Category", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Categories");
+                });
+
             modelBuilder.Entity("OzSapkaTShirt.Models.City", b =>
                 {
                     b.Property<byte>("PlateCode")
@@ -287,6 +304,20 @@ namespace OzSapkaTShirt.Migrations
                     b.ToTable("Genders");
                 });
 
+            modelBuilder.Entity("OzSapkaTShirt.Models.GenderProduct", b =>
+                {
+                    b.Property<byte>("GenderId")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nchar(15)");
+
+                    b.HasKey("GenderId");
+
+                    b.ToTable("GenderProducts");
+                });
+
             modelBuilder.Entity("OzSapkaTShirt.Models.Order", b =>
                 {
                     b.Property<long>("Id")
@@ -297,6 +328,9 @@ namespace OzSapkaTShirt.Migrations
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("date");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
 
                     b.Property<float>("TotalPrice")
                         .HasColumnType("real");
@@ -323,8 +357,8 @@ namespace OzSapkaTShirt.Migrations
                     b.Property<float>("Price")
                         .HasColumnType("real");
 
-                    b.Property<byte>("Quantity")
-                        .HasColumnType("tinyint");
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
 
                     b.Property<float>("Total")
                         .HasColumnType("real");
@@ -344,6 +378,9 @@ namespace OzSapkaTShirt.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"), 1L, 1);
 
+                    b.Property<long>("CategoryId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Color")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -357,15 +394,25 @@ namespace OzSapkaTShirt.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nchar(200)");
 
+                    b.Property<byte[]>("DetailImg")
+                        .HasColumnType("image");
+
                     b.Property<string>("Fabric")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nchar(20)");
 
-                    b.Property<string>("Model")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nchar(10)");
+                    b.Property<byte>("GenderProduct")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("HatSize")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("LargeSize")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("MediumSize")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -375,17 +422,47 @@ namespace OzSapkaTShirt.Migrations
                     b.Property<float>("Price")
                         .HasColumnType("real");
 
-                    b.Property<string>("Size")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("char(3)");
+                    b.Property<string>("PropertyName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("SmallSize")
+                        .HasColumnType("bit");
 
                     b.Property<byte[]>("ThumbNail")
                         .HasColumnType("image");
 
+                    b.Property<bool>("XLargeSize")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("GenderProduct");
+
                     b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("OzSapkaTShirt.Models.Property", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"), 1L, 1);
+
+                    b.Property<long>("CategoryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PropertyName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("Properties");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -472,7 +549,7 @@ namespace OzSapkaTShirt.Migrations
             modelBuilder.Entity("OzSapkaTShirt.Models.OrderProduct", b =>
                 {
                     b.HasOne("OzSapkaTShirt.Models.Order", "Order")
-                        .WithMany()
+                        .WithMany("OrderProducts")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -486,6 +563,41 @@ namespace OzSapkaTShirt.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("OzSapkaTShirt.Models.Product", b =>
+                {
+                    b.HasOne("OzSapkaTShirt.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OzSapkaTShirt.Models.GenderProduct", "GenderTypes")
+                        .WithMany()
+                        .HasForeignKey("GenderProduct")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("GenderTypes");
+                });
+
+            modelBuilder.Entity("OzSapkaTShirt.Models.Property", b =>
+                {
+                    b.HasOne("OzSapkaTShirt.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("OzSapkaTShirt.Models.Order", b =>
+                {
+                    b.Navigation("OrderProducts");
                 });
 #pragma warning restore 612, 618
         }

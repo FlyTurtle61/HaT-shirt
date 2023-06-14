@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace OzSapkaTShirt.Models
 {
@@ -9,6 +10,7 @@ namespace OzSapkaTShirt.Models
         [DisplayName("Sipariş")]
         public long OrderId { get; set; }
 
+        [JsonIgnore]
         [DisplayName("Sipariş")]
         [ForeignKey("OrderId")]
         public Order? Order { get; set; }
@@ -22,7 +24,7 @@ namespace OzSapkaTShirt.Models
 
         [DisplayName("Adet")]
         [Required(ErrorMessage = "Bu alan zorunludur.")]
-        public byte Quantity { get; set; }
+        public int Quantity { get; set; }
 
         [DisplayName("Fiyat")]
         public float Price { get; set; }

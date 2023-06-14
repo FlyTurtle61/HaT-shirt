@@ -1,0 +1,21 @@
+﻿<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<div style="width:100%;margin:0 auto;text-align:center;" >
+    <input id="searchtxt" class="searchtxt" placeholder="Search..." type="text" />
+</div>
+<div id="products"></div>
+
+
+<script>
+    var key=$("#searchtxt").val();
+
+    $("#searchtxt").on("keyup",()=>{
+        var key=$("#searchtxt").val();
+        getProducts(key);
+    })
+        getProducts(key);
+        function getProducts(key){
+        $("#products").load("@Url.Action("PartialProduct","Home")/" + @ViewBag.id + "?text="+key)
+        }
+    console.log("Products: " + $("#products").html())
+</script>

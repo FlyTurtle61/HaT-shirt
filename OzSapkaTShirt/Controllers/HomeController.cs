@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using OzSapkaTShirt.Data;
 using OzSapkaTShirt.Models;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace OzSapkaTShirt.Controllers
 {
@@ -17,20 +18,37 @@ namespace OzSapkaTShirt.Controllers
             _context = context;
         }
 
-        public IActionResult Index(string? id=null)
+        public IActionResult Index()
         {
+
+            string userIdentity = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            Order order = _context.Orders
+                .Where(o => o.UserId == userIdentity && o.Status == 0)
+                .Include(o => o.OrderProducts).FirstOrDefault();
+            if (order != null)
+            {
+                HttpContext.Session.SetInt32("BasketCount", order.OrderProducts.Sum(op => op.Quantity));
+            }
+            else
+            {
+                HttpContext.Session.SetInt32("BasketCount", 0);
+            }
             return View(_context.Products.ToList());
         }
-
-        public IActionResult Privacy()
+        public IActionResult ProductsByCategory(long id)
         {
+            ViewBag.id = id;
             return View();
         }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        public PartialViewResult PartialProduct(long id, string text)
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            var res = _context.Products.Where(p => p.CategoryId == id).ToList();
+            if (text != null)
+            {
+                res = res.Where(p => p.Name.ToLower().Contains(text.ToLower())).ToList();
+            }
+            return PartialView("SearchProductPartialView", res);
         }
+
     }
 }

@@ -11,11 +11,12 @@ using OzSapkaTShirt.Data;
 using OzSapkaTShirt.Models;
 using System.Drawing.Imaging;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace OzSapkaTShirt.Areas.Admin.Controllers
 {
     [Area("Admin")]
-    //[Authorize(Roles = "Administrator")]
+    [Authorize(Roles = "Administrator")]
     public class ProductsController : Controller
     {
         private readonly ApplicationContext _context;
@@ -28,9 +29,9 @@ namespace OzSapkaTShirt.Areas.Admin.Controllers
         // GET: Admin/Products
         public async Task<IActionResult> Index()
         {
-              return _context.Products != null ? 
-                          View(await _context.Products.ToListAsync()) :
-                          Problem("Entity set 'ApplicationContext.Products'  is null.");
+            return _context.Products != null ?
+                        View(await _context.Products.ToListAsync()) :
+                        Problem("Entity set 'ApplicationContext.Products'  is null.");
         }
 
         // GET: Admin/Products/Details/5
@@ -54,54 +55,75 @@ namespace OzSapkaTShirt.Areas.Admin.Controllers
         // GET: Admin/Products/Create
         public IActionResult Create()
         {
+            SelectList categories = new SelectList(_context.Categories, "Id", "CategoryName");
+            ViewData["Categories"] = categories;
             return View();
         }
 
-        // POST: Products/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Description,Size,Model,Price,Fabric,Color,Image")] Product product)
+        public async Task<IActionResult> Create(Product product)
         {
-            MemoryStream target, reSizedTarget;
-            Image reSizedImage, originalImage;
-            EncoderParameter qualityParameter;
-            EncoderParameters encoderParameters;
-            ImageCodecInfo[] allCoDecs;
-            ImageCodecInfo jPEGCodec = null;
+            SelectList categories;
 
             if (ModelState.IsValid)
             {
-                if (product.Image != null)
-                {
-                    encoderParameters = new EncoderParameters(1);
-                    qualityParameter = new EncoderParameter(Encoder.Quality, 60L);
-                    encoderParameters.Param[0] = qualityParameter;
-                    reSizedTarget = new MemoryStream();
-                    allCoDecs = ImageCodecInfo.GetImageEncoders();
-                    foreach (ImageCodecInfo coDec in allCoDecs)
-                    {
-                        if (coDec.FormatDescription == "JPEG")
-                        {
-                            jPEGCodec = coDec;
-                        }
-                    }
-                    target = new MemoryStream();
-                    product.Image.CopyTo(target); //Dosyayı stream'a kopyala
-                    originalImage = Image.FromStream(target);
-                    reSizedImage = ReSize(originalImage, 300, 400);
-                    reSizedImage.Save(reSizedTarget, jPEGCodec, encoderParameters);
-                    product.DBImage = reSizedTarget.ToArray();
-                    reSizedImage = ReSize(originalImage, 150, 200);
-                    reSizedImage.Save(reSizedTarget, jPEGCodec, encoderParameters);
-                    product.ThumbNail = reSizedTarget.ToArray();
-                }
+                PictureEncode(product);
+                Property property = new Property();
+                property.PropertyName = product.PropertyName;
+                property.CategoryId = product.CategoryId;
+
+                categories = new SelectList(_context.Categories, "Id", "CategoryName");
+                ViewData["Categories"] = categories;
                 _context.Add(product);
+                _context.Add(property);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(product);
+        }
+        public void PictureEncode(Product product)
+        {
+            if (product.Image != null)
+            {
+                MemoryStream target, reSizedTarget, reSizedTarget1, reSizedTarget2;
+                Image reSizedImage, originalImage;
+                EncoderParameter qualityParameter;
+                EncoderParameters encoderParameters;
+                ImageCodecInfo[] allCoDecs;
+                ImageCodecInfo jPEGCodec = null;
+
+                encoderParameters = new EncoderParameters(1);
+                qualityParameter = new EncoderParameter(Encoder.Quality, 80L);
+                encoderParameters.Param[0] = qualityParameter;
+                reSizedTarget = new MemoryStream();
+                reSizedTarget1 = new MemoryStream();
+                reSizedTarget2 = new MemoryStream();
+                allCoDecs = ImageCodecInfo.GetImageEncoders();
+
+                foreach (ImageCodecInfo coDec in allCoDecs)
+                {
+                    if (coDec.FormatDescription == "JPEG")
+                    {
+                        jPEGCodec = coDec;
+                    }
+                }
+                target = new MemoryStream();
+                product.Image.CopyTo(target); //Dosyayı stream'a kopyala
+                originalImage = Image.FromStream(target);
+                reSizedImage = ReSize(originalImage, 150, 200);
+                reSizedImage.Save(reSizedTarget, jPEGCodec, encoderParameters);
+                product.DBImage = reSizedTarget.ToArray();
+
+                reSizedImage = ReSize(originalImage, 100, 100);
+                reSizedImage.Save(reSizedTarget1, jPEGCodec, encoderParameters);
+                product.ThumbNail = reSizedTarget1.ToArray();
+
+                reSizedImage = ReSize(originalImage, 550, 400);
+                reSizedImage.Save(reSizedTarget2, jPEGCodec, encoderParameters);
+                product.DetailImg = reSizedTarget2.ToArray();
+            }
+
         }
 
         // GET: Admin/Products/Edit/5
@@ -120,23 +142,27 @@ namespace OzSapkaTShirt.Areas.Admin.Controllers
             return View(product);
         }
 
-        // POST: Admin/Products/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description,Size,Model,Price,Fabric,Color,DBImage,ThumbNail")] Product product)
+        public async Task<IActionResult> Edit(long id, Product product)
         {
+
+
+
             //Create'teki bütün resim işleri Edit'te de olmalı
             if (id != product.Id)
             {
                 return NotFound();
             }
-
             if (ModelState.IsValid)
             {
                 try
                 {
+                    if (product.Image != null)
+                    {
+                        PictureEncode(product);
+
+                    }
                     _context.Update(product);
                     await _context.SaveChangesAsync();
                 }
@@ -152,6 +178,7 @@ namespace OzSapkaTShirt.Areas.Admin.Controllers
                     }
                 }
                 return RedirectToAction(nameof(Index));
+
             }
             return View(product);
         }
@@ -188,14 +215,14 @@ namespace OzSapkaTShirt.Areas.Admin.Controllers
             {
                 _context.Products.Remove(product);
             }
-            
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool ProductExists(long id)
         {
-          return (_context.Products?.Any(e => e.Id == id)).GetValueOrDefault();
+            return (_context.Products?.Any(e => e.Id == id)).GetValueOrDefault();
         }
         private Image ReSize(Image originalImage, int newWidth, int newHeight)
         {

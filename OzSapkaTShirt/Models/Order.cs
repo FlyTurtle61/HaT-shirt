@@ -23,7 +23,11 @@ namespace OzSapkaTShirt.Models
         [DisplayName("Toplam")]
         public float TotalPrice { get; set; }
 
-        [DisplayName("Durum")]
         public byte Status { get; set; }
+
+        public List<OrderProduct>? OrderProducts { get; set; }
+
+        [NotMapped]
+        public long? Clicked { get; set; } = null;
     }
 }

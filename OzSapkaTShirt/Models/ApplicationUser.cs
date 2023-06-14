@@ -65,7 +65,7 @@ public class ApplicationUser : IdentityUser
     public override string PhoneNumber { get => base.PhoneNumber; set => base.PhoneNumber = value; }
 
     [DisplayName("Şehir")]
-    public byte CityCode { get; set; }
+    public byte? CityCode { get; set; }
 
     [ForeignKey("CityCode")]
     public City? City { get; set; }
@@ -85,6 +85,7 @@ public class ApplicationUser : IdentityUser
     [Compare("PassWord", ErrorMessage = "Parola eşleşme başarısız")]
     public string ConfirmPassWord { get; set; } = default!;
 
+    public bool RememberMe { get; set; }
     public ApplicationUser Trim()
     {
         this.Name = this.Name.Trim();

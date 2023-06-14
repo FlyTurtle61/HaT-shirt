@@ -7,6 +7,7 @@ using OzSapkaTShirt.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using EasyCashIdentityProject.EntityLayer.Concrete;
 
 namespace OzSapkaTShirt.Controllers
 {
@@ -23,16 +24,10 @@ namespace OzSapkaTShirt.Controllers
             _signInManager = signInManager;
         }
 
-        // GET: Users
-
-        // GET: Userss/Details/5
         [Authorize]
         public async Task<IActionResult> Details(string? id)
         {
             ApplicationUser? user;
-            var a = 3;
-
-            a = a / 1000000000;
 
             if (id == null || _userManager.Users == null)
             {
@@ -49,23 +44,19 @@ namespace OzSapkaTShirt.Controllers
             return View(user);
         }
 
-        // GET: Users/Create
         public IActionResult Create()
         {
             SelectList genders = new SelectList(_context.Genders, "Id", "Name");
+            ViewData["Genders"] = genders;
             SelectList cities = new SelectList(_context.Cities, "PlateCode", "Name");
 
-            ViewData["Genders"] = genders;
             ViewData["Cities"] = cities;
             return View();
         }
 
-        // POST: Users/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,SurName,Corporate,Address,Gender,BirthDate,UserName,Email,PhoneNumber,PassWord,ConfirmPassWord,CityCode")] ApplicationUser user)
+        public async Task<IActionResult> Create(ApplicationUser user)
         {
             IdentityResult? identityResult;
             SelectList genders, cities;
@@ -76,6 +67,7 @@ namespace OzSapkaTShirt.Controllers
                 if (identityResult == IdentityResult.Success)
                 {
                     //Add customer role to user
+
                     return RedirectToAction("Index", "Home");
                 }
                 foreach (IdentityError error in identityResult.Errors)
@@ -119,7 +111,7 @@ namespace OzSapkaTShirt.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Edit(string id, [Bind("Id,Name,SurName,Corporate,Address,Gender,BirthDate,UserName,Email,PhoneNumber,CityCode")] ApplicationUser user)
+        public async Task<IActionResult> Edit(string id, ApplicationUser user)
         {
             IdentityResult? identityResult;
             SelectList genders, cities;
@@ -196,25 +188,23 @@ namespace OzSapkaTShirt.Controllers
             {
                 await _userManager.DeleteAsync(user);
             }
-            return RedirectToAction("Index","Home");
-        }
-
-        private bool UserExists(string id)
-        {
-            return (_userManager.Users?.Any(e => e.Id == id)).GetValueOrDefault();
+            return RedirectToAction("Index", "Home");
         }
 
         public IActionResult Login()
         {
+            if ((Request.Cookies.ContainsKey("userName") & Request.Cookies.ContainsKey("passWord")))
+            {
+                ViewBag.username = Request.Cookies["userName"];
+                ViewBag.password = Request.Cookies["passWord"];
+            }
+
             return View();
         }
 
-        // POST: Users/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login([Bind("UserName,PassWord")] ApplicationUser user)
+        public async Task<IActionResult> Login(ApplicationUser user)
         {
             Microsoft.AspNetCore.Identity.SignInResult signInResult;
 
@@ -225,6 +215,24 @@ namespace OzSapkaTShirt.Controllers
                     signInResult = _signInManager.PasswordSignInAsync(user.UserName, user.PassWord, false, false).Result;
                     if (signInResult.Succeeded == true)
                     {
+                        string userIdentity = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                        Order order = _context.Orders
+                            .Where(o => o.UserId == userIdentity && o.Status == 0)
+                            .Include(o => o.OrderProducts).FirstOrDefault();
+                        if (order != null)
+                        {
+                            HttpContext.Session.SetInt32("BasketCount", order.OrderProducts.Sum(op => op.Quantity));
+                        }
+
+                        else
+                        {
+                            HttpContext.Session.SetInt32("BasketCount", 0);
+                        }
+                        if (user.RememberMe)
+                        {
+                            Response.Cookies.Append("userName", user.UserName);
+                            Response.Cookies.Append("passWord", user.PassWord);
+                        }
                         return RedirectToAction("Index", "Home");
                     }
                 }
@@ -238,9 +246,6 @@ namespace OzSapkaTShirt.Controllers
             return View();
         }
 
-        // POST: Users/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
@@ -260,6 +265,60 @@ namespace OzSapkaTShirt.Controllers
             }
             return View();
         }
+        public IActionResult ForgetPassword()
+        {
+            return View();
+        }
+        [HttpPost]
+        public async Task<IActionResult> ForgetPassword(ForgetPasswordViewModel forgetPasswordViewModel)
+        {
+            ApplicationUser applicationUser;
+
+            string resetToken;
+
+            if (ModelState.IsValid)
+            {
+                applicationUser = await _userManager.FindByEmailAsync(forgetPasswordViewModel.eMail);
+                if (applicationUser != null)
+                {
+                    resetToken = await _userManager.GeneratePasswordResetTokenAsync(applicationUser);
+
+                    new SendMail(forgetPasswordViewModel.eMail, "jarvis.tony.34@gmail.com", "pqabajejwxfnsiau", "Admin-CapStone",
+                        forgetPasswordViewModel.eMail, "Şifre Yenileme", "Şifre Yenileme için Kod : " + resetToken);
+
+                    ViewData["eMail"] = forgetPasswordViewModel.eMail;
+                    return View("ResetPassword");
+                }
+                ModelState.AddModelError("eMail", "Kullanıcı Bulunamadı");
+            }
+            ModelState.AddModelError("eMail", "Geçersiz Bir Mail Adresi Girildi");
+
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel resetPasswordViewModel)
+        {
+            ApplicationUser applicationUser;
+            IdentityResult identityResult;
+
+            if (ModelState.IsValid)
+            {
+                applicationUser = await _userManager.FindByEmailAsync(resetPasswordViewModel.eMail);
+                applicationUser.UserName = applicationUser.UserName.Trim();
+                identityResult = await _userManager.ResetPasswordAsync(applicationUser, resetPasswordViewModel.Code, resetPasswordViewModel.PassWord);
+                if (identityResult.Succeeded)
+                {
+                    RedirectToAction("Login");
+                }
+                ModelState.AddModelError("Code", "Doğru Kod Girdiğinizden Emin olun");
+
+            }
+            ModelState.AddModelError("PassWord", "Geçersiz Bir Parola Girildi");
+
+            return View();
+        }
+
         public IActionResult Logout()
         {
             _signInManager.SignOutAsync().Wait();

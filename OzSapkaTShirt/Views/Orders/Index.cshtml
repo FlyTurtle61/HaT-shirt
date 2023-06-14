@@ -1,47 +1,109 @@
-﻿@model IEnumerable<OzSapkaTShirt.Models.Order>
+﻿@model List<OzSapkaTShirt.Models.Order>
 
 @{
     ViewData["Title"] = "Index";
 }
 
-<h1>Index</h1>
+<h1>Sepetim</h1>
+<hr />
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.User)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.OrderDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TotalPrice)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.User.Id)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.OrderDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TotalPrice)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+<div class="wrapper" id="_wrapper">
+    <div id="_order" class="even_column">
+            @foreach(var order in Model)
+            {
+                @if (order.Status == 0)
+                {
+        <div class="basketCards">
+                        @foreach(var product in order.OrderProducts)
+                        {
+                            <div id="@product.ProductId">
+                            <div class="basketCard">
+                                <a asp-action="Details" class="content" onclick="return false" asp-controller="Products" asp-route-id="@product.ProductId">
+
+                                    <div>
+                                        @if (@product.Product.ThumbNail != null)
+                                        {
+                                            <img class="image" src="data:image/png;base64,@Convert.ToBase64String(@product.Product.ThumbNail)" style="width:100px" />
+                                        }
+                                    </div>
+                                    <div class="card_detail">
+
+                                        <div class="name">@product.Product.Name</div>
+                                        <small class="description">@product.Product.Description</small>
+                                    </div>
+
+                                    <div>
+                                        <div class="quantity">
+                                            <input type="button" onclick="AddToBasket(@product.ProductId.ToString(),-1)" class="btn-Size" value="-" />
+                                            <div id="@product.ProductId-quantity">
+                                                @product.Quantity
+                                            </div>
+                                            <input type="button" onclick="AddToBasket(@product.ProductId.ToString(),1)" class="btn-Size" value="+" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="total"><span id="@product.ProductId-subtotal">@product.Total</span> ₺</div>
+                                    </div>
+
+                                </a>
+                                <button onclick="DeleteFromBasket(@product.ProductId.ToString());" class="deleteProduct">X</button>
+                            </div>
+                        </div>
+                    }
+                
+                                            
+        </div>
+                
+        <div class="basketDetails">
+                    <div class="d-flex justify-content-between w-100"><span><b>Toplam Tutar :</b></span><span id="total">@order.TotalPrice</span> ₺</div>
+                    <a class="basketConfirm" asp-controller="OrderProducts" asp-action="Approve" asp-route-id="@order.Id">Sepeti Onayla</a>
+
+        </div>
+                }
+            }
+    </div>
+    <script>
+        function AddToBasket(productId, quantity = 1, isDelete = false) {
+            if ($("#" + productId + "-quantity").html() == 1 && quantity == -1) {
+                $("#" + productId).remove()
+            }
+            $.post("@Url.Action("UpDateBasket","OrderProducts")/" + productId + "?quantity=" + quantity + "&delete=" + isDelete, UpDateBasket, "json");
+
+        }
+
+
+        function UpDateBasket(data) 
+        {
+            var basketCount = 0;
+            
+            if(data==null)
+            {
+                $("#_order").remove();
+                $("#_wrapper").html("<h1>Sepet Boş</h1>");
+                $("#basketCount").html(0);
+            }
+            else
+            {
+                for (var i = 0; i < data.orderProducts.length; i++) 
+                {
+                    basketCount = basketCount + data.orderProducts[i].quantity;
+                   
+                    if (data.orderProducts[i].productId == data.clicked)  {
+                        $("#" + data.orderProducts[i].productId + "-quantity").html(data.orderProducts[i].quantity);
+                        $("#" + data.orderProducts[i].productId+"-subtotal").html(data.orderProducts[i].total);
+                    }
+                }
+            $("#total").html(data.totalPrice);
+            $("#basketCount").html(basketCount);
+            }
+        }
+        
+
+        function DeleteFromBasket(productId)
+        {
+            var miktar = $("#" + productId + "-quantity").html();
+            AddToBasket(productId,miktar,true);
+            $("#" + productId).remove();
+        }
+       </script>
+</div>
